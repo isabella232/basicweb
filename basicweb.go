@@ -137,11 +137,21 @@ func echoHandler(rw http.ResponseWriter, r *http.Request) {
   log.Println( r.Method, r.URL.Path )
   rr.Body, err = ioutil.ReadAll(r.Body)
   if err != nil { http.Error(rw, err.Error(), http.StatusInternalServerError); return }
-  rrb, err := json.Marshal(rr)
-  if err != nil { http.Error(rw, err.Error(), http.StatusInternalServerError); return }
-  rw.Header().Set("Content-Type", "application/json")
-  if( len(*headers)>0 ) { h:=strings.Split(*headers,","); for i:=0;i<len(h);i++ { hh:=strings.Split(h[i],"="); rw.Header().Set(strings.TrimSpace(hh[0]),strings.TrimSpace(hh[1])) } }
-  rw.Write(rrb)
+  if *status <0 {
+    if *status < -1 { 
+      rw.Write([]byte(rr.Method+" "+rr.Path+"\n"))
+      if len(rr.Headers)>0 { for n,v := range rr.Headers { rw.Write([]byte(n+": "+strings.Join(v,",")+"\n")) } }
+      rw.Write([]byte("\n"))
+    }
+    rw.Header().Set("Content-Type", "text/html")
+    rw.Write(rr.Body)
+  } else {
+    rrb, err := json.Marshal(rr)
+    if err != nil { http.Error(rw, err.Error(), http.StatusInternalServerError); return }
+    rw.Header().Set("Content-Type", "application/json")
+    if( len(*headers)>0 ) { h:=strings.Split(*headers,","); for i:=0;i<len(h);i++ { hh:=strings.Split(h[i],"="); rw.Header().Set(strings.TrimSpace(hh[0]),strings.TrimSpace(hh[1])) } }
+    rw.Write(rrb)
+  }
 }
 func main() {
   flag.Parse() ; if flag.NArg() != 0 { flag.Usage() ; os.Exit(1) ; }
